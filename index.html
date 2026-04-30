@@ -359,8 +359,7 @@
             if (err.name === 'NotAllowedError') {
                 status.textContent = '🔴 Caméra refusée';
                 // Refus caméra = suspicion de triche
-                alert("⚠️ L'accès à la caméra est obligatoire pour cet examen.
-Veuillez autoriser la caméra et recharger la page.");
+                alert("⚠️ L'accès à la caméra est obligatoire pour cet examen.\nVeuillez autoriser la caméra et recharger la page.");
             } else {
                 status.textContent = '🔴 Caméra indisponible';
             }
@@ -393,42 +392,61 @@ Veuillez autoriser la caméra et recharger la page.");
     // --- SIMULATEUR BODE ---
     const R = 1000, C = 100e-9;
     let dataPoints = [];
-    let bodeChart = new Chart(document.getElementById('bodeChart').getContext('2d'), {
-        type: 'line',
-        data: { datasets: [{
-            label: 'Gain G (dB)',
-            data: dataPoints,
-            borderColor: '#3498db',
-            backgroundColor: 'rgba(52,152,219,0.15)',
-            showLine: true,
-            pointRadius: 5
-        }]},
-        options: {
-            scales: {
-                x: { type: 'logarithmic', title: { display: true, text: 'Fréquence f (Hz)' } },
-                y: { min: -45, max: 5, title: { display: true, text: 'Gain G (dB)' } }
+    let bodeChart = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('bodeChart');
+        if (!canvas) return;
+        bodeChart = new Chart(canvas.getContext('2d'), {
+            type: 'scatter',
+            data: { datasets: [{
+                label: 'Gain G (dB)',
+                data: dataPoints,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52,152,219,0.7)',
+                showLine: true,
+                pointRadius: 6,
+                tension: 0.3
+            }]},
+            options: {
+                animation: false,
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'logarithmic',
+                        title: { display: true, text: 'Fréquence f (Hz)' },
+                        min: 10, max: 100000
+                    },
+                    y: {
+                        min: -45, max: 5,
+                        title: { display: true, text: 'Gain G (dB)' }
+                    }
+                }
             }
-        }
-    });
+        });
 
-    document.getElementById('freqSlider').addEventListener('input', e => {
-        let f = Math.pow(10, parseFloat(e.target.value));
-        let w = 2 * Math.PI * f;
-        let G = 20 * Math.log10(1 / Math.sqrt(1 + Math.pow(R * C * w, 2)));
-        document.getElementById('freqVal').innerHTML = "<b><i>" + f.toFixed(1) + "</i></b> Hz";
-        document.getElementById('gainVal').textContent = G.toFixed(2) + " dB";
-    });
+        document.getElementById('freqSlider').addEventListener('input', e => {
+            let f = Math.pow(10, parseFloat(e.target.value));
+            let w = 2 * Math.PI * f;
+            let G = 20 * Math.log10(1 / Math.sqrt(1 + Math.pow(R * C * w, 2)));
+            document.getElementById('freqVal').innerHTML = "<b><i>" + f.toFixed(1) + "</i></b> Hz";
+            document.getElementById('gainVal').textContent = G.toFixed(2) + " dB";
+        });
 
-    document.getElementById('addPointBtn').addEventListener('click', () => {
-        let f = Math.pow(10, parseFloat(document.getElementById('freqSlider').value));
-        let w = 2 * Math.PI * f;
-        let G = 20 * Math.log10(1 / Math.sqrt(1 + Math.pow(R * C * w, 2)));
-        if (!dataPoints.find(p => p.x === f)) {
-            dataPoints.push({ x: f, y: G });
-            dataPoints.sort((a, b) => a.x - b.x);
-            bodeChart.update();
-            document.getElementById('pointCount').textContent = dataPoints.length;
-        }
+        document.getElementById('addPointBtn').addEventListener('click', () => {
+            let f = Math.pow(10, parseFloat(document.getElementById('freqSlider').value));
+            let w = 2 * Math.PI * f;
+            let G = 20 * Math.log10(1 / Math.sqrt(1 + Math.pow(R * C * w, 2)));
+            if (!dataPoints.find(p => p.x === f)) {
+                dataPoints.push({ x: f, y: parseFloat(G.toFixed(2)) });
+                dataPoints.sort((a, b) => a.x - b.x);
+                bodeChart.update();
+                document.getElementById('pointCount').textContent = dataPoints.length;
+            } else {
+                alert("Ce point existe déjà ! Choisissez une autre fréquence.");
+            }
+        });
     });
 
     function calcSimScore() {
